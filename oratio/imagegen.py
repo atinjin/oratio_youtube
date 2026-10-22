@@ -128,13 +128,14 @@ def _openai(prompt: str) -> bytes:
 
 def _openrouter(prompt: str) -> bytes:
     key = os.environ.get("OPENROUTER_API_KEY")
-    model = os.environ.get("ORATIO_IMAGE_MODEL", "google/gemini-2.5-flash-image")
+    model = os.environ.get("ORATIO_IMAGE_MODEL", "google/gemini-3-pro-image")
     auth = {"Authorization": f"Bearer {key}"} if key else {}  # 없으면 프록시가 넣어 준다
     data = _post("https://openrouter.ai/api/v1/chat/completions",
                  {"model": model,
                   "messages": [{"role": "user", "content": f"Generate an image: {prompt}"}],
                   "modalities": ["image", "text"],
-                  "image_config": {"aspect_ratio": "16:9"}},
+                  "image_config": {"aspect_ratio": "16:9",
+                                   **({"image_size": size} if (size := os.environ.get("ORATIO_IMAGE_SIZE", "2K")) else {})}},
                  {**auth,
                   "HTTP-Referer": "https://github.com/atinjin/oratio_youtube",
                   "X-Title": "oratio_youtube"})
@@ -155,7 +156,8 @@ def generate(prompt: str, out_dir: Path, provider: str) -> Path:
     """프롬프트로 이미지를 만들어 저장한다. 같은 프롬프트는 저장된 파일을 그대로 쓴다."""
     text = full_prompt(prompt)
     model = os.environ.get("ORATIO_IMAGE_MODEL", "")
-    digest = hashlib.sha1(f"{provider}|{model}|{text}".encode()).hexdigest()[:12]
+    size = os.environ.get("ORATIO_IMAGE_SIZE", "2K") if provider == "openrouter" else ""
+    digest = hashlib.sha1(f"{provider}|{model}|{size}|{text}".encode()).hexdigest()[:12]
     out_dir.mkdir(parents=True, exist_ok=True)
     for ext in (".png", ".jpg"):
         cached = out_dir / f"ai_{digest}{ext}"
