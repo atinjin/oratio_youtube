@@ -6,6 +6,8 @@
   - OpenAI                 :  OPENAI_API_KEY
 
 모델을 바꾸려면 ORATIO_IMAGE_MODEL 환경 변수를 쓴다.
+키를 환경 변수 대신 프록시가 넣어 주는 환경(Claude Code 클라우드의 Network secrets 등)에서는
+ORATIO_IMAGE_PROVIDER=openrouter 처럼 서비스만 지정하면, 인증 헤더 없이 요청을 보낸다.
 
 추가 패키지 없이 표준 라이브러리(urllib)로만 호출한다.
 같은 프롬프트로 만든 이미지는 build/scenes/ 에 저장해 두고 다시 쓰므로, 두 번 돈이 들지 않는다.
@@ -55,6 +57,9 @@ class ImageGenError(RuntimeError):
 
 
 def detect_provider() -> str | None:
+    forced = os.environ.get("ORATIO_IMAGE_PROVIDER", "").strip().lower()
+    if forced in ("openrouter", "gemini", "openai"):
+        return forced
     if os.environ.get("OPENROUTER_API_KEY"):
         return "openrouter"
     if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
@@ -85,7 +90,7 @@ def _gemini(prompt: str) -> bytes:
     key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     base = "https://generativelanguage.googleapis.com/v1beta/models"
     model = os.environ.get("ORATIO_IMAGE_MODEL", "imagen-4.0-generate-001")
-    headers = {"x-goog-api-key": key}
+    headers = {"x-goog-api-key": key} if key else {}
 
     if model.startswith("imagen"):
         data = _post(f"{base}/{model}:predict",
@@ -110,11 +115,11 @@ def _gemini(prompt: str) -> bytes:
 
 
 def _openai(prompt: str) -> bytes:
-    key = os.environ["OPENAI_API_KEY"]
+    key = os.environ.get("OPENAI_API_KEY")
     model = os.environ.get("ORATIO_IMAGE_MODEL", "gpt-image-1")
     data = _post("https://api.openai.com/v1/images/generations",
                  {"model": model, "prompt": prompt, "size": "1536x1024", "quality": "high", "n": 1},
-                 {"Authorization": f"Bearer {key}"})
+                 {"Authorization": f"Bearer {key}"} if key else {})
     try:
         return base64.b64decode(data["data"][0]["b64_json"])
     except (KeyError, IndexError) as e:
@@ -122,14 +127,15 @@ def _openai(prompt: str) -> bytes:
 
 
 def _openrouter(prompt: str) -> bytes:
-    key = os.environ["OPENROUTER_API_KEY"]
+    key = os.environ.get("OPENROUTER_API_KEY")
     model = os.environ.get("ORATIO_IMAGE_MODEL", "google/gemini-2.5-flash-image")
+    auth = {"Authorization": f"Bearer {key}"} if key else {}  # 없으면 프록시가 넣어 준다
     data = _post("https://openrouter.ai/api/v1/chat/completions",
                  {"model": model,
                   "messages": [{"role": "user", "content": f"Generate an image: {prompt}"}],
                   "modalities": ["image", "text"],
                   "image_config": {"aspect_ratio": "16:9"}},
-                 {"Authorization": f"Bearer {key}",
+                 {**auth,
                   "HTTP-Referer": "https://github.com/atinjin/oratio_youtube",
                   "X-Title": "oratio_youtube"})
     if "error" in data:
