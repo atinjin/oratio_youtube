@@ -29,6 +29,19 @@ def _text(s: str, split: bool = False) -> str:
     return s.replace(" / ", "\\N") if split else s
 
 
+def _text_width(s: str) -> float:
+    """글자 크기 1 기준 대략적인 줄 너비. 한글·한자는 1, 공백·영문·숫자는 그보다 좁다."""
+    w = 0.0
+    for ch in s:
+        if ch == " ":
+            w += 0.3
+        elif ord(ch) < 0x1100:
+            w += 0.55
+        else:
+            w += 1.0
+    return max(w, 1.0)
+
+
 def build_ass(path: Path, cues: list[Cue], meta: Meta, style: Style, total: float) -> None:
     W, H = style.width, style.height
     white = _ass_color(style.lyric_color)
@@ -52,7 +65,7 @@ def build_ass(path: Path, cues: list[Cue], meta: Meta, style: Style, total: floa
         "ScriptType: v4.00+",
         f"PlayResX: {W}",
         f"PlayResY: {H}",
-        "WrapStyle: 0",
+        "WrapStyle: 2",  # 자동 줄바꿈 없음: 가사는 항상 한 줄 (넘치면 글자를 줄인다)
         "ScaledBorderAndShadow: yes",
         "",
         "[V4+ Styles]",
@@ -95,9 +108,13 @@ def build_ass(path: Path, cues: list[Cue], meta: Meta, style: Style, total: floa
     if cues:
         add(max(first - 0.5, 0), last, "Corner", _text(corner), 1000)
 
-    # 3) 가사
+    # 3) 가사 — 화면 폭을 넘으면 글자 크기를 줄여 한 줄로 유지
+    max_w = W * 0.88
     for cue in cues:
-        add(cue.start, cue.end, "Lyric", _text(cue.text, split=True))
+        text = cue.text.replace(" / ", " ")
+        width = _text_width(text) * style.lyric_size
+        fs = f"{{\\fs{int(style.lyric_size * max_w / width)}}}" if width > max_w else ""
+        add(cue.start, cue.end, "Lyric", fs + _text(text))
 
     # 4) 아웃트로: 성경 구절 + 크레딧
     outro_start = last + 0.6
