@@ -168,6 +168,21 @@ def place_lyrics(lines: list[str], regions: list[tuple[float, float]]):
     return cues
 
 
+def trim_to_vocals(cues, regions: list[tuple[float, float]], interlude: float = INTERLUDE) -> int:
+    """가사가 나온 뒤 노래가 interlude 초 넘게 멈추면(간주) 그 지점에서 가사를 내린다.
+
+    탭 싱크로 만든 타이밍처럼 '가사 내림' 표시가 없는 경우에 쓴다. 고친 줄 수를 돌려준다.
+    """
+    trimmed = 0
+    for cue in cues:
+        for (_, b1), (a2, _) in zip(regions, regions[1:]):
+            if cue.start + 0.5 < b1 < cue.end and a2 - b1 > interlude:
+                cue.end = b1 + 0.6
+                trimmed += 1
+                break
+    return trimmed
+
+
 def vocals_timing(song: Song):
     path = find_vocals(song) or separate_vocals(song)
     print(f"[정렬] 목소리 트랙으로 노래 구간을 찾습니다: {path.name}")

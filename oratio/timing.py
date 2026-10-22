@@ -176,7 +176,14 @@ def get_cues(song: Song, mode: str, model_name: str, separate_vocals: bool, reti
 
     if song.timing_file.exists() and not retime:
         print(f"[정렬] 저장된 타이밍을 사용합니다: {song.timing_file.name} (새로 만들려면 --retime)")
-        return read_lrc(song.timing_file, total)
+        cues = read_lrc(song.timing_file, total)
+        from .vocals import find_vocals, sung_regions, trim_to_vocals
+        vocals = find_vocals(song)
+        if vocals:
+            n = trim_to_vocals(cues, sung_regions(vocals))
+            if n:
+                print(f"[정렬] 목소리 트랙 기준으로 간주 {n}곳에서 가사를 자동으로 내립니다.")
+        return cues
 
     if mode == "auto":
         mode = _auto_mode(song)
