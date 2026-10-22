@@ -28,7 +28,8 @@ STYLE_SUFFIX = (
     "Cinematic film still, photorealistic, shot on 35mm anamorphic lens, natural light, "
     "shallow depth of field, rich but restrained color grading, epic biblical film atmosphere, "
     "Judean hills of ancient Israel, 16:9 widescreen. "
-    "Leave the lower third of the frame calm and uncluttered for subtitles. "
+    "Full-bleed photograph that fills the entire frame edge to edge, with no borders, bands, "
+    "letterboxing, panels or overlays. Keep the main subject in the upper two-thirds of the frame. "
     "No text, no letters, no watermark, no modern objects, no visible faces."
 )
 
