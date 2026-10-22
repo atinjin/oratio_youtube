@@ -138,7 +138,8 @@ def scene_images(song: Song, scenes: list[Scene], width: int, height: int, sourc
     provider = imagegen.detect_provider() if source in ("auto", "ai") else None
     if source == "ai" and provider is None:
         raise SystemExit(
-            "AI 이미지 생성용 API 키가 없습니다. 둘 중 하나를 환경 변수로 넣어 주세요.\n"
+            "AI 이미지 생성용 API 키가 없습니다. 하나를 환경 변수로 넣어 주세요.\n"
+            "  OPENROUTER_API_KEY  (https://openrouter.ai/keys)\n"
             "  GEMINI_API_KEY  (Google AI Studio: https://aistudio.google.com/apikey)\n"
             "  OPENAI_API_KEY  (https://platform.openai.com/api-keys)"
         )

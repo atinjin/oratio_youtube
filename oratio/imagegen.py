@@ -1,8 +1,11 @@
 """이미지 생성 AI 로 장면 배경(실사 영화 스틸컷 느낌)을 만든다.
 
 지원하는 서비스 (환경 변수에 API 키를 넣어 두면 자동으로 고른다):
+  - OpenRouter             :  OPENROUTER_API_KEY  (키 하나로 Gemini 등 여러 이미지 모델 사용)
   - Google Gemini / Imagen :  GEMINI_API_KEY  (또는 GOOGLE_API_KEY)
   - OpenAI                 :  OPENAI_API_KEY
+
+모델을 바꾸려면 ORATIO_IMAGE_MODEL 환경 변수를 쓴다.
 
 추가 패키지 없이 표준 라이브러리(urllib)로만 호출한다.
 같은 프롬프트로 만든 이미지는 build/scenes/ 에 저장해 두고 다시 쓰므로, 두 번 돈이 들지 않는다.
@@ -52,6 +55,8 @@ class ImageGenError(RuntimeError):
 
 
 def detect_provider() -> str | None:
+    if os.environ.get("OPENROUTER_API_KEY"):
+        return "openrouter"
     if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
         return "gemini"
     if os.environ.get("OPENAI_API_KEY"):
@@ -116,6 +121,30 @@ def _openai(prompt: str) -> bytes:
         raise ImageGenError(f"이미지가 오지 않았습니다: {str(data)[:300]}") from e
 
 
+def _openrouter(prompt: str) -> bytes:
+    key = os.environ["OPENROUTER_API_KEY"]
+    model = os.environ.get("ORATIO_IMAGE_MODEL", "google/gemini-2.5-flash-image")
+    data = _post("https://openrouter.ai/api/v1/chat/completions",
+                 {"model": model,
+                  "messages": [{"role": "user", "content": f"Generate an image: {prompt}"}],
+                  "modalities": ["image", "text"],
+                  "image_config": {"aspect_ratio": "16:9"}},
+                 {"Authorization": f"Bearer {key}",
+                  "HTTP-Referer": "https://github.com/atinjin/oratio_youtube",
+                  "X-Title": "oratio_youtube"})
+    if "error" in data:
+        raise ImageGenError(str(data["error"])[:300])
+    for choice in data.get("choices", []):
+        for img in choice.get("message", {}).get("images") or []:
+            url = (img.get("image_url") or img.get("imageUrl") or {}).get("url", "")
+            if url.startswith("data:"):
+                return base64.b64decode(url.split(",", 1)[1])
+            if url.startswith("http"):
+                with urllib.request.urlopen(url, timeout=120) as resp:
+                    return resp.read()
+    raise ImageGenError(f"이미지가 오지 않았습니다 (이미지 생성 모델인지 확인해 주세요): {str(data)[:300]}")
+
+
 def generate(prompt: str, out_dir: Path, provider: str) -> Path:
     """프롬프트로 이미지를 만들어 저장한다. 같은 프롬프트는 저장된 파일을 그대로 쓴다."""
     text = full_prompt(prompt)
@@ -128,7 +157,7 @@ def generate(prompt: str, out_dir: Path, provider: str) -> Path:
             return cached
 
     print(f"[배경] AI 이미지 생성 중 ({provider}): {prompt[:60]}...")
-    raw = _gemini(text) if provider == "gemini" else _openai(text)
+    raw = {"openrouter": _openrouter, "gemini": _gemini, "openai": _openai}[provider](text)
     ext = ".jpg" if raw[:3] == b"\xff\xd8\xff" else ".png"
     path = out_dir / f"ai_{digest}{ext}"
     path.write_bytes(raw)

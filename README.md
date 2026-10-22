@@ -150,19 +150,21 @@ python -m oratio render songs/곡폴더 --scenes
 
 | 서비스 | 환경 변수 | 키 발급 |
 |---|---|---|
+| OpenRouter (기본: Gemini 2.5 Flash Image) | `OPENROUTER_API_KEY` | <https://openrouter.ai/keys> |
 | Google Gemini (Imagen 4) | `GEMINI_API_KEY` | <https://aistudio.google.com/apikey> |
 | OpenAI (gpt-image-1) | `OPENAI_API_KEY` | <https://platform.openai.com/api-keys> |
 
 ```bash
 # macOS / Linux
-export GEMINI_API_KEY=발급받은키
+export OPENROUTER_API_KEY=발급받은키
 # Windows PowerShell
-$env:GEMINI_API_KEY="발급받은키"
+$env:OPENROUTER_API_KEY="발급받은키"
 ```
 
 - 이미지 생성은 **유료**입니다. 곡 하나에 장면 8~10장 정도이고, 한 번 만든 이미지는 `build/scenes/` 에 저장해서
   다시 render 해도 새로 만들지 않습니다. (`prompt:` 를 고친 장면만 새로 만듭니다)
-- 모델을 바꾸려면 `ORATIO_IMAGE_MODEL` 환경 변수를 씁니다. (예: `gemini-2.5-flash-image`)
+- 모델을 바꾸려면 `ORATIO_IMAGE_MODEL` 환경 변수를 씁니다. (예: OpenRouter 는 `google/gemini-2.5-flash-image`, Gemini 는 `imagen-4.0-generate-001`)
+- 키가 여러 개 있으면 OpenRouter → Gemini → OpenAI 순서로 씁니다.
 - 마음에 드는 사진이 따로 있으면 `scenes.yaml` 의 해당 장면에 `image: 사진.jpg` 를 적으면 그 사진을 씁니다.
 - API 키가 없으면 코드로 그린 풍경화로 대신합니다. (`--image-source paint`)
 
