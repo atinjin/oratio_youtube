@@ -55,15 +55,52 @@ def _background_inputs(song: Song, style: Style, total: float) -> tuple[list[str
     return args, chain
 
 
+def _scene_inputs(images: list[Path], starts: list[float], style: Style, total: float,
+                  fade: float) -> tuple[list[str], str, int]:
+    """장면 그림 여러 장을 시간에 맞춰 이어 붙이고, 바뀔 때 서서히 겹치게(xfade) 한다.
+
+    i 번째 그림은 (starts[i] - fade/2) ~ (starts[i+1] + fade/2) 동안 보인다.
+    """
+    W, H, fps = style.width, style.height, style.fps
+    bw, bh = int(W * 1.1) // 2 * 2, int(H * 1.1) // 2 * 2
+    n = len(images)
+    bounds = list(starts) + [total]
+    args: list[str] = []
+    parts: list[str] = []
+    for i, img in enumerate(images):
+        begin = 0.0 if i == 0 else bounds[i] - fade / 2
+        end = bounds[i + 1] + (fade / 2 if i < n - 1 else 1.0)
+        args += ["-loop", "1", "-framerate", str(fps), "-t", f"{end - begin:.3f}", "-i", str(img)]
+        # 장면마다 움직이는 방향을 바꾼다
+        sx, sy = (1, 1) if i % 2 == 0 else (-1, 1)
+        move = (f"crop={W}:{H}:x='(iw-ow)/2*(1+{sx}*0.9*sin(t/19))':y='(ih-oh)/2*(1+{sy}*0.9*sin(t/27))'"
+                if style.background_motion else f"crop={W}:{H}")
+        parts.append(f"[{i}:v]scale={bw}:{bh}:force_original_aspect_ratio=increase,crop={bw}:{bh},"
+                     f"{move},fps={fps},setsar=1,format=yuv420p[s{i}]")
+    last = "s0"
+    for i in range(1, n):
+        parts.append(f"[{last}][s{i}]xfade=transition=fade:duration={fade}:offset={bounds[i] - fade / 2:.3f}[x{i}]")
+        last = f"x{i}"
+    parts.append(f"[{last}]null")
+    return args, ";".join(parts), n
+
+
 def render(song: Song, style: Style, ass_file: Path, total: float, output: Path,
-           start: float = 0.0, length: float | None = None, fast: bool = False) -> None:
+           start: float = 0.0, length: float | None = None, fast: bool = False,
+           scenes: tuple[list[Path], list[float]] | None = None, fade: float = 2.0) -> None:
     build = ass_file.parent
-    bg_args, chain = _background_inputs(song, style, total)
+    if scenes:
+        bg_args, chain, n_inputs = _scene_inputs(scenes[0], scenes[1], style, total, fade)
+        dim = style.scene_dim
+    else:
+        bg_args, chain = _background_inputs(song, style, total)
+        n_inputs = 1
+        dim = style.background_dim if song.background is not None else 0.0  # 기본 그라데이션은 이미 어둡다
 
     if style.background_blur > 0:
         chain += f",boxblur={int(style.background_blur)}:1"
-    k = max(0.0, min(1.0, 1.0 - float(style.background_dim)))
-    if k < 1.0 and song.background is not None:  # 기본 그라데이션은 이미 어둡다
+    k = max(0.0, min(1.0, 1.0 - float(dim)))
+    if k < 1.0:
         chain += f",colorchannelmixer=rr={k:.3f}:gg={k:.3f}:bb={k:.3f}"
     chain += ",vignette=PI/5"
 
@@ -73,7 +110,7 @@ def render(song: Song, style: Style, ass_file: Path, total: float, output: Path,
     chain += f",{subs},format=yuv420p[v]"
 
     args = [*bg_args, "-i", str(song.audio), "-filter_complex", chain,
-            "-map", "[v]", "-map", "1:a"]
+            "-map", "[v]", "-map", f"{n_inputs}:a"]
     if start > 0:
         args += ["-ss", f"{start:.2f}"]
     duration = (min(length, total - start) if length else total - start)

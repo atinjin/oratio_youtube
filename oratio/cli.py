@@ -100,8 +100,16 @@ def cmd_render(args: argparse.Namespace) -> None:
     preview = args.preview is not None
     suffix = "_preview" if preview else ("_shorts" if args.vertical else "")
     output = song.folder / f"{song.folder.name}{suffix}.mp4"
+    scene_bg = None
+    if args.scenes or args.replan or (song.folder / "scenes.yaml").exists():
+        from .scenes import FADE_SECONDS, get_scenes, scene_images
+        scenes = get_scenes(song, cues, args.replan)
+        print("[배경] 장면 그림을 준비합니다...")
+        scene_bg = (scene_images(song, scenes, style.width, style.height, args.image_source), [sc.start for sc in scenes])
+
     render(song, style, ass_file, total, output,
-           start=args.start, length=args.preview, fast=preview)
+           start=args.start, length=args.preview, fast=preview,
+           scenes=scene_bg, fade=FADE_SECONDS if scene_bg else 2.0)
 
     if not preview:
         write_description(song, song.folder / "description.txt")
@@ -149,6 +157,13 @@ def main(argv: list[str] | None = None) -> None:
                    help="앞부분 N초만 빠르게 미리보기로 만듦")
     p.add_argument("--start", type=float, default=0.0, metavar="초",
                    help="미리보기 시작 위치 (--preview 와 함께)")
+    p.add_argument("--scenes", action="store_true",
+                   help="가사 내용에 맞춰 장면 배경을 만들어 바꿔 가며 보여줌 (scenes.yaml 이 있으면 자동)")
+    p.add_argument("--image-source", choices=["auto", "ai", "paint"], default="auto",
+                   help="장면 그림 출처. ai = 이미지 생성 AI(실사), paint = 코드로 그린 그림, "
+                        "auto = API 키가 있으면 ai")
+    p.add_argument("--replan", action="store_true",
+                   help="저장된 scenes.yaml 을 무시하고 장면 계획을 새로 만듦")
     p.add_argument("--vertical", action="store_true",
                    help="세로 영상(1080x1920, 쇼츠용)으로 만듦")
     p.set_defaults(func=cmd_render)

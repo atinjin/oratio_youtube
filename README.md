@@ -133,7 +133,40 @@ font: NanumMyeongjo       # fonts/ 폴더에 넣은 다른 폰트 이름으로 �
 > 다른 폰트를 쓰려면 `.ttf` 파일을 `fonts/` 폴더에 넣고 `font:` 에 글꼴 이름을 적습니다.
 > 이름에 `[wght]` 가 붙은 **가변 폰트는 인식이 잘 안 되니**, 굵기별로 나뉜 일반 폰트 파일을 쓰는 게 좋습니다.
 
-## 5. 유튜브에 올릴 때
+## 5. 가사에 맞춘 배경 (AI 실사 이미지)
+
+`--scenes` 를 붙이면 가사 내용에 맞춰 장면을 나누고, 장면마다 다른 배경을 보여줍니다.
+장면이 바뀔 때는 2초 동안 서서히 넘어갑니다.
+
+```bash
+python -m oratio render songs/곡폴더 --scenes
+```
+
+1. **장면 계획**: 가사 낱말로 장면을 고릅니다. (목자·풀밭 → 초원, 물가 → 잔잔한 물, 영혼·바른 길 → 해 뜨는 길,
+   사망·어두운 → 어둠의 골짜기, 함께·안위 → 골짜기에 내리는 빛, 집 → 언덕 위 성당, 아멘·인자 → 영광의 빛)
+   결과는 곡 폴더의 `scenes.yaml` 에 저장되고, 시각·장면·프롬프트를 고칠 수 있습니다. 새로 만들려면 `--replan`.
+2. **이미지 생성**: 장면마다 영어 프롬프트(`prompt:`)로 **실사 영화 스틸컷 느낌**의 이미지를 AI 로 만듭니다.
+   API 키를 환경 변수로 넣어 두면 자동으로 씁니다.
+
+| 서비스 | 환경 변수 | 키 발급 |
+|---|---|---|
+| Google Gemini (Imagen 4) | `GEMINI_API_KEY` | <https://aistudio.google.com/apikey> |
+| OpenAI (gpt-image-1) | `OPENAI_API_KEY` | <https://platform.openai.com/api-keys> |
+
+```bash
+# macOS / Linux
+export GEMINI_API_KEY=발급받은키
+# Windows PowerShell
+$env:GEMINI_API_KEY="발급받은키"
+```
+
+- 이미지 생성은 **유료**입니다. 곡 하나에 장면 8~10장 정도이고, 한 번 만든 이미지는 `build/scenes/` 에 저장해서
+  다시 render 해도 새로 만들지 않습니다. (`prompt:` 를 고친 장면만 새로 만듭니다)
+- 모델을 바꾸려면 `ORATIO_IMAGE_MODEL` 환경 변수를 씁니다. (예: `gemini-2.5-flash-image`)
+- 마음에 드는 사진이 따로 있으면 `scenes.yaml` 의 해당 장면에 `image: 사진.jpg` 를 적으면 그 사진을 씁니다.
+- API 키가 없으면 코드로 그린 풍경화로 대신합니다. (`--image-source paint`)
+
+## 6. 유튜브에 올릴 때
 
 - 영상: `곡폴더/곡폴더이름.mp4`
 - 설명란: `description.txt` 내용을 붙여 넣습니다.
@@ -148,6 +181,5 @@ font: NanumMyeongjo       # fonts/ 폴더에 넣은 다른 폰트 이름으로 �
 ## 다음 단계 아이디어
 
 - 가사 줄마다 스페이스바로 박자를 찍어 타이밍을 맞추는 간단한 웹 화면
-- 가사 분위기에 맞는 AI 배경 이미지 자동 생성
 - 인트로·아웃트로 애니메이션 템플릿 추가
 - YouTube API 로 비공개 자동 업로드

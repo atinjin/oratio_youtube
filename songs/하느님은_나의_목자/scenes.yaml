@@ -1,0 +1,54 @@
+# 배경 장면 계획입니다. 고친 뒤 다시 render 하면 반영됩니다.
+# kind: pasture, water, sunrise, valley, presence, glory, house, sky
+# prompt: AI 이미지 생성에 쓰는 장면 설명(영어). 고치면 그 장면만 새로 생성합니다.
+# image: 직접 고른 사진을 쓰려면 곡 폴더 기준 파일 이름을 적습니다. (예: image: lake.jpg)
+- start: 0.0
+  kind: pasture
+  lines: 하느님은 나의 목자 내게 부족함 없네
+  prompt: A lone shepherd seen from behind, holding a wooden staff, gently leading
+    a flock of sheep across lush green pastures on rolling hills at golden hour, warm
+    sunlight and soft haze.
+- start: 71.15
+  kind: water
+  lines: 그가 나를 쉴 만한 물가로 인도하시도다
+  prompt: Still, quiet waters of a calm stream winding through a peaceful valley at
+    dawn, thin mist on the surface, a few sheep resting by the bank, soft reflections
+    of the morning sky.
+- start: 88.95
+  kind: sunrise
+  lines: 내 영혼 다시 살리시어
+  prompt: A narrow ancient path winding through hills toward the rising sun, golden
+    rays breaking over the ridge, dew on the grass, a sense of renewal and guidance.
+- start: 126.57
+  kind: valley
+  lines: 내가 사망의 어두운 길을 다닐지라도
+  prompt: A deep, dark rocky ravine in the Judean wilderness at night, steep cliffs,
+    cold moonlight, drifting fog, a small warm lantern light carried along the narrow
+    path far below.
+- start: 152.85
+  kind: presence
+  lines: 주께서 나와 함께 하심이라
+  prompt: Heavenly god rays breaking through dark storm clouds into a deep valley,
+    a shepherd's rod and staff silhouetted on a rock, light overcoming the darkness,
+    comfort and protection.
+- start: 191.55
+  kind: pasture
+  lines: 하느님은 나의 목자 내게 부족함 없네
+  prompt: A lone shepherd seen from behind, holding a wooden staff, gently leading
+    a flock of sheep across lush green pastures on rolling hills at golden hour, warm
+    sunlight and soft haze.
+- start: 230.85
+  kind: glory
+  lines: 내 평생의 선하심과 주의 인자하심이
+  prompt: Radiant golden light pouring over vast hills and a valley at sunrise, glowing
+    clouds, majestic and peaceful, a feeling of goodness and mercy filling the land.
+- start: 249.6
+  kind: house
+  lines: 내가 여호와 집에 거하리로다
+  prompt: An ancient stone church on a quiet hill at blue hour, warm candlelight glowing
+    from its windows and open door, a clear sky full of stars above, eternal and welcoming.
+- start: 291.7
+  kind: glory
+  lines: 아멘
+  prompt: Radiant golden light pouring over vast hills and a valley at sunrise, glowing
+    clouds, majestic and peaceful, a feeling of goodness and mercy filling the land.

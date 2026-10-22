@@ -32,6 +32,7 @@ class Style:
     background_dim: float = 0.45     # 배경 어둡게 (0 = 그대로, 1 = 검정)
     background_blur: int = 0         # 배경 흐림 정도 (0 = 끔)
     background_motion: bool = True   # 배경 천천히 움직이기
+    scene_dim: float = 0.25          # 가사 맞춤 장면 배경(--scenes)을 어둡게 하는 정도
 
     crf: int = 20                    # 화질 (낮을수록 고화질, 18~23 권장)
     preset: str = "medium"           # 인코딩 속도 (ultrafast ~ slow)
