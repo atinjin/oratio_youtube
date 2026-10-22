@@ -1,0 +1,567 @@
+<title>가사 탭 싱크</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column — transport + lyric preview on top, waveform, then the cue sheet. */
+:root {
+  --bg: #eceee9;
+  --panel: #f7f8f5;
+  --ink: #1c211f;
+  --muted: #5d6662;
+  --line: #d3d7d1;
+  --gold: #a46d12;
+  --gold-soft: #a46d1224;
+  --wave: #8c968f;
+  --danger: #b4372b;
+  --ok: #2f7a4b;
+  --stage: #171b19;
+  --stage-ink: #f2efe6;
+  --font-lyric: "Noto Serif KR", "Nanum Myeongjo", serif;
+  --font-ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513; --panel: #191e1b; --ink: #e8eae4; --muted: #9aa49e; --line: #2c332f;
+    --gold: #e2ab4b; --gold-soft: #e2ab4b26; --wave: #56615a; --danger: #ef6f60; --ok: #6cc28c;
+    --stage: #0b0d0c; --stage-ink: #f4f0e4; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --panel: #191e1b; --ink: #e8eae4; --muted: #9aa49e; --line: #2c332f;
+  --gold: #e2ab4b; --gold-soft: #e2ab4b26; --wave: #56615a; --danger: #ef6f60; --ok: #6cc28c;
+  --stage: #0b0d0c; --stage-ink: #f4f0e4; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 120px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+h1 { font-family: var(--font-lyric); font-weight: 700; font-size: 1.6rem; margin: 0; text-wrap: balance; }
+.song { color: var(--muted); font-size: .9rem; }
+.song b { color: var(--ink); font-weight: 600; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.grow { flex: 1 1 auto; min-width: 0; }
+
+button, .filebtn, select, input[type=number] {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 7px; padding: 7px 12px; cursor: pointer;
+}
+button:hover, .filebtn:hover { border-color: var(--gold); }
+button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary { background: var(--gold); border-color: var(--gold); color: #1b1408; font-weight: 600; }
+input[type=number] { width: 5.2em; cursor: text; font-family: var(--font-mono); }
+.filebtn input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.filebtn { position: relative; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+label.small { font-size: .82rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+
+.clock { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.05rem; min-width: 9.5em; }
+.clock span { color: var(--muted); }
+
+.stage {
+  background: var(--stage); color: var(--stage-ink); border-radius: 10px; min-height: 150px;
+  display: grid; place-items: center; text-align: center; padding: 18px; position: relative; overflow: hidden;
+}
+.stage .lyric { font-family: var(--font-lyric); font-weight: 700; font-size: clamp(1.25rem, 3.6vw, 2.1rem); line-height: 1.45; text-wrap: balance; }
+.stage .lyric.empty { color: #f4f0e466; font-weight: 500; font-size: 1rem; font-family: var(--font-ui); }
+.stage .next { position: absolute; left: 14px; right: 14px; bottom: 10px; font-size: .82rem; color: #f4f0e499; }
+.stage .next b { color: var(--gold); font-weight: 600; }
+
+.tap {
+  width: 100%; padding: 18px; font-size: 1.15rem; font-weight: 700; letter-spacing: .02em;
+  background: var(--gold); color: #1b1408; border: none; border-radius: 10px; touch-action: manipulation;
+}
+.tap:active { transform: translateY(1px); }
+.tap small { display: block; font-weight: 500; font-size: .82rem; opacity: .8; }
+
+canvas { display: block; width: 100%; border-radius: 6px; background: var(--bg); touch-action: none; }
+#overview { height: 46px; cursor: pointer; }
+#zoom { height: 120px; cursor: crosshair; margin-top: 8px; }
+.hint { font-size: .8rem; color: var(--muted); }
+
+.sheet { display: grid; gap: 2px; max-height: 52vh; overflow-y: auto; padding-right: 4px; }
+.cue {
+  display: grid; grid-template-columns: 2.2em 6.2em 1fr auto; align-items: center; gap: 10px;
+  padding: 6px 8px; border-radius: 7px; border: 1px solid transparent; cursor: pointer;
+}
+.cue:hover { background: var(--gold-soft); }
+.cue .n { font-family: var(--font-mono); color: var(--muted); font-size: .8rem; text-align: right; }
+.cue .t { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.cue .tx { min-width: 0; overflow-wrap: anywhere; }
+.cue .tx.clear { color: var(--muted); font-style: italic; font-size: .88rem; }
+.cue .acts { display: flex; gap: 4px; }
+.cue .acts button { padding: 2px 8px; font-size: .78rem; }
+.cue.sel { border-color: var(--gold); background: var(--gold-soft); }
+.cue.playing .tx { color: var(--gold); font-weight: 600; }
+.cue.tapped .t { color: var(--ok); }
+.cue.bad .t { color: var(--danger); font-weight: 600; }
+
+.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px 18px; font-size: .84rem; color: var(--muted); }
+kbd { font-family: var(--font-mono); font-size: .78rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); background: var(--panel); }
+.status { font-size: .86rem; }
+.status.ok { color: var(--ok); } .status.err { color: var(--danger); }
+textarea { width: 100%; min-height: 9em; font-family: var(--font-mono); font-size: .8rem; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 8px; }
+h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+@media (max-width: 560px) {
+  .cue { grid-template-columns: 1.8em 5.4em 1fr; }
+  .cue .acts { grid-column: 2 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>가사 탭 싱크</h1>
+    <div class="song"><b>하느님은 나의 목자</b> · 조혜영 곡 · 혼성 4부</div>
+  </header>
+
+  <section class="panel">
+    <div class="row">
+      <label class="filebtn" id="fileLabel">음원 불러오기<input type="file" id="file" accept="audio/*,.m4a,.mp3,.wav"></label>
+      <span class="hint grow" id="fileName">PC에 있는 특송 음원(m4a)을 고르세요. 업로드되지 않고 이 브라우저에서만 재생됩니다.</span>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="play" disabled>▶ 재생</button>
+      <button id="back" disabled title="3초 뒤로">−3초</button>
+      <button id="fwd" disabled title="3초 앞으로">+3초</button>
+      <div class="clock" id="clock">0:00.0 <span>/ 0:00</span></div>
+      <label class="small">속도
+        <select id="rate"><option value="1">1.0×</option><option value="0.85">0.85×</option><option value="0.7">0.7×</option></select>
+      </label>
+      <label class="small" title="스페이스바를 누르는 반응 시간만큼 앞당겨 기록합니다">반응 보정
+        <input type="number" id="lat" value="0.15" step="0.05" min="0" max="0.6">초
+      </label>
+    </div>
+  </section>
+
+  <section class="stage" aria-live="polite">
+    <div class="lyric empty" id="now">음원을 불러오면 지금 타이밍대로 가사가 표시됩니다</div>
+    <div class="next" id="next"></div>
+  </section>
+
+  <button class="tap" id="tap" disabled>TAP · 다음 줄 시작<small id="tapInfo">스페이스바와 같습니다</small></button>
+
+  <section class="panel">
+    <h2>파형</h2>
+    <canvas id="overview"></canvas>
+    <canvas id="zoom"></canvas>
+    <p class="hint">위: 곡 전체(누르면 이동) · 아래: 지금 위치 앞뒤 8초. 금색 세로선이 가사 줄 시작이고, 끌어서 옮길 수 있습니다. 점선은 가사를 내리는 지점입니다.</p>
+  </section>
+
+  <section class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">가사 타이밍</h2>
+      <div class="row">
+        <button id="undo" disabled>되돌리기</button>
+        <button id="reset">처음 타이밍으로</button>
+      </div>
+    </div>
+    <div class="sheet" id="sheet"></div>
+  </section>
+
+  <section class="panel">
+    <h2>저장</h2>
+    <div class="row">
+      <button class="primary" id="saveClaude">Claude에게 저장</button>
+      <button id="copy">LRC 복사</button>
+      <button id="dl" hidden>파일로 받기 (.txt)</button>
+      <span class="status grow" id="status"></span>
+    </div>
+    <p class="hint">"Claude에게 저장"을 누른 뒤 대화창에 "저장했어"라고 알려 주시면, 이 타이밍으로 영상을 다시 만듭니다.</p>
+    <textarea id="lrc" readonly aria-label="LRC 텍스트"></textarea>
+  </section>
+
+  <section class="panel">
+    <h2>사용법</h2>
+    <div class="keys">
+      <div><kbd>Space</kbd> 정지 중이면 재생, 재생 중이면 선택한 줄 시작을 지금 시각으로 찍고 다음 줄로</div>
+      <div><kbd>Backspace</kbd> 방금 찍은 것 되돌리기</div>
+      <div><kbd>Enter</kbd> 재생 / 일시정지</div>
+      <div><kbd>←</kbd> <kbd>→</kbd> 3초 뒤로 / 앞으로</div>
+      <div><kbd>↑</kbd> <kbd>↓</kbd> 줄 선택</div>
+      <div><kbd>,</kbd> <kbd>.</kbd> 선택한 줄 0.1초 앞/뒤 (<kbd>Shift</kbd> 0.5초)</div>
+      <div>줄 누르기: 그 줄 2초 전부터 재생해서 다시 찍기</div>
+      <div>"내림" 줄: 간주 때 가사를 내리는 지점. 줄 옆 버튼으로 추가·삭제</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const SONG_ID = "hananim-nui-mokja";
+  const ORIGINAL = [{"t": 29.1, "text": "하느님은 나의 목자 / 내게 부족함 없네"}, {"t": 36.4, "text": ""}, {"t": 44.39, "text": "그가 나를 푸른 풀밭에 / 누이시도다"}, {"t": 56.44, "text": ""}, {"t": 64.75, "text": "하느님은 나의 목자 / 내게 부족함 없네"}, {"t": 72.15, "text": "그가 나를 쉴 만한 물가로 / 인도하시도다"}, {"t": 89.95, "text": "내 영혼 다시 살리시어"}, {"t": 100.25, "text": ""}, {"t": 105.15, "text": "바른 길로 인도하시는도다"}, {"t": 111.55, "text": ""}, {"t": 118.74, "text": "주 이름 위해 인도하시도다"}, {"t": 127.57, "text": "내가 사망의 어두운 길을 / 다닐지라도"}, {"t": 139.61, "text": "내가 해를 두려워하지 / 않을 것은"}, {"t": 146.75, "text": ""}, {"t": 153.85, "text": "주께서 나와 함께 하심이라"}, {"t": 162.68, "text": "나를 안위하시나이다"}, {"t": 169.91, "text": ""}, {"t": 192.55, "text": "하느님은 나의 목자 / 내게 부족함 없네"}, {"t": 201.9, "text": ""}, {"t": 211.25, "text": "그가 나를 푸른 풀밭에 / 누이시도다"}, {"t": 222.0, "text": ""}, {"t": 231.85, "text": "내 평생의 선하심과 / 주의 인자하심이"}, {"t": 242.05, "text": "정녕 나를 따르리니"}, {"t": 250.6, "text": "내가 여호와 집에 거하리로다"}, {"t": 260.8, "text": "여호와의 집에 / 영원히 거하리로다"}, {"t": 269.75, "text": ""}, {"t": 292.7, "text": "아멘"}, {"t": 295.85, "text": ""}];
+  const DRAFT_KEY = "tapsync-draft-" + SONG_ID;
+
+  const $ = (id) => document.getElementById(id);
+  const audio = new Audio();
+  audio.preload = "auto";
+
+  let rows = loadDraft() || ORIGINAL.map(r => ({ ...r }));
+  let tapped = new Set();
+  let sel = 0;
+  let undoStack = [];
+  let peaks = null;          // Float32Array of max abs per bucket
+  let peakRate = 0;          // buckets per second
+  let duration = 0;
+  let dragging = -1;
+  let db = null;
+
+  function loadDraft() {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      return Array.isArray(d) && d.length ? d : null;
+    } catch { return null; }
+  }
+  function saveDraft() {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(rows)); } catch {}
+  }
+
+  const fmt = (t, dec = 2) => {
+    if (!isFinite(t)) t = 0;
+    const m = Math.floor(t / 60), s = t - m * 60;
+    return `${String(m).padStart(2, "0")}:${s.toFixed(dec).padStart(dec + 3, "0")}`;
+  };
+  const fmtShort = (t) => { const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s.toFixed(1).padStart(4, "0")}`; };
+
+  function toLrc() {
+    const head = "# 가사 타이밍 파일입니다. [분:초] 를 고친 뒤 다시 render 하면 반영됩니다.\n# 내용 없는 [분:초] 줄은 그 시각에 가사를 화면에서 내립니다.\n";
+    return head + rows.map(r => `[${fmt(r.t)}]${r.text}`).join("\n") + "\n";
+  }
+
+  function activeIndex(t) {
+    let idx = -1;
+    for (let i = 0; i < rows.length; i++) { if (rows[i].t <= t) idx = i; else break; }
+    return idx;
+  }
+
+  // ---------- cue sheet ----------
+  const sheet = $("sheet");
+  function renderSheet() {
+    const frag = document.createDocumentFragment();
+    rows.forEach((r, i) => {
+      const el = document.createElement("div");
+      el.className = "cue";
+      el.dataset.i = i;
+      if (i === sel) el.classList.add("sel");
+      if (tapped.has(i)) el.classList.add("tapped");
+      if (i > 0 && r.t <= rows[i - 1].t) el.classList.add("bad");
+      const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
+      const t = document.createElement("span"); t.className = "t"; t.textContent = fmt(r.t);
+      const tx = document.createElement("span"); tx.className = "tx" + (r.text ? "" : " clear");
+      tx.textContent = r.text ? r.text.replace(/ \/ /g, " ⏎ ") : "가사 내림 (간주)";
+      const acts = document.createElement("span"); acts.className = "acts";
+      const add = document.createElement("button"); add.textContent = "+내림"; add.title = "이 줄 뒤에 가사 내림 지점 추가"; add.dataset.act = "add";
+      acts.append(add);
+      if (!r.text) { const del = document.createElement("button"); del.textContent = "삭제"; del.dataset.act = "del"; acts.append(del); }
+      el.append(n, t, tx, acts);
+      frag.append(el);
+    });
+    sheet.replaceChildren(frag);
+    markPlaying();
+    $("lrc").value = toLrc();
+    $("undo").disabled = undoStack.length === 0;
+    $("tapInfo").textContent = sel < rows.length
+      ? `다음: ${sel + 1}번 ${rows[sel].text ? rows[sel].text.replace(/ \/ /g, " ") : "가사 내림"}`
+      : "마지막 줄까지 찍었습니다";
+  }
+  let lastPlaying = -2;
+  function markPlaying() {
+    const idx = activeIndex(audio.currentTime);
+    if (idx === lastPlaying && sheet.querySelector(".playing")) return;
+    lastPlaying = idx;
+    sheet.querySelectorAll(".playing").forEach(e => e.classList.remove("playing"));
+    const el = sheet.children[idx];
+    if (el) el.classList.add("playing");
+  }
+  function scrollSel() {
+    const el = sheet.children[sel];
+    if (el) el.scrollIntoView({ block: "nearest" });
+  }
+
+  sheet.addEventListener("click", (e) => {
+    const cue = e.target.closest(".cue"); if (!cue) return;
+    const i = +cue.dataset.i;
+    const act = e.target.dataset.act;
+    if (act === "add") {
+      pushUndo();
+      const next = rows[i + 1] ? rows[i + 1].t : duration || rows[i].t + 5;
+      rows.splice(i + 1, 0, { t: +(Math.min(rows[i].t + 4, (rows[i].t + next) / 2)).toFixed(2), text: "" });
+      shiftTapped(i + 1, 1);
+      changed(); return;
+    }
+    if (act === "del") {
+      pushUndo(); rows.splice(i, 1); shiftTapped(i, -1);
+      if (sel >= rows.length) sel = rows.length - 1;
+      changed(); return;
+    }
+    sel = i;
+    if (audio.src) { audio.currentTime = Math.max(0, (i > 0 ? rows[i - 1].t : rows[i].t) - 2); }
+    renderSheet(); draw();
+  });
+  function shiftTapped(from, d) {
+    tapped = new Set([...tapped].filter(x => !(d < 0 && x === from)).map(x => x >= from ? x + d : x));
+  }
+
+  function pushUndo() {
+    undoStack.push({ rows: rows.map(r => ({ ...r })), sel, tapped: new Set(tapped) });
+    if (undoStack.length > 200) undoStack.shift();
+  }
+  function changed() { saveDraft(); renderSheet(); draw(); updateStage(); }
+
+  // ---------- actions ----------
+  function tap() {
+    if (!audio.src || sel >= rows.length) return;
+    pushUndo();
+    const lat = Math.max(0, parseFloat($("lat").value) || 0) * audio.playbackRate;
+    rows[sel].t = +Math.max(0, audio.currentTime - lat).toFixed(2);
+    tapped.add(sel);
+    // 뒤 줄이 앞당겨진 줄보다 빠르면 순서가 꼬이지 않게 조금 밀어 둔다
+    for (let j = sel + 1; j < rows.length && rows[j].t <= rows[j - 1].t; j++) rows[j].t = +(rows[j - 1].t + 0.5).toFixed(2);
+    sel = Math.min(sel + 1, rows.length);
+    changed(); scrollSel();
+  }
+  function undo() {
+    const u = undoStack.pop(); if (!u) return;
+    rows = u.rows; sel = u.sel; tapped = u.tapped; changed(); scrollSel();
+  }
+  function nudge(d) {
+    if (sel >= rows.length) return;
+    pushUndo(); rows[sel].t = +Math.max(0, rows[sel].t + d).toFixed(2); changed();
+    if (audio.src) { audio.currentTime = Math.max(0, rows[sel].t - 1.5); }
+  }
+  function togglePlay() {
+    if (!audio.src) return;
+    if (audio.paused) audio.play().catch(() => setStatus("재생을 시작하지 못했습니다. ▶ 재생 버튼을 눌러 주세요.", "err"));
+    else audio.pause();
+  }
+  function seek(d) { if (audio.src) audio.currentTime = Math.min(Math.max(0, audio.currentTime + d), duration || 1e9); }
+
+  $("tap").addEventListener("click", (e) => { e.currentTarget.blur(); if (audio.paused) togglePlay(); else tap(); });
+  $("play").addEventListener("click", (e) => { e.currentTarget.blur(); togglePlay(); });
+  $("back").addEventListener("click", (e) => { e.currentTarget.blur(); seek(-3); });
+  $("fwd").addEventListener("click", (e) => { e.currentTarget.blur(); seek(3); });
+  $("undo").addEventListener("click", (e) => { e.currentTarget.blur(); undo(); });
+  $("reset").addEventListener("click", (e) => {
+    e.currentTarget.blur(); pushUndo();
+    rows = ORIGINAL.map(r => ({ ...r })); tapped = new Set(); sel = 0; changed();
+    setStatus("처음 타이밍으로 되돌렸습니다. 되돌리기로 취소할 수 있습니다.", "");
+  });
+  $("rate").addEventListener("change", (e) => { audio.playbackRate = +e.target.value; e.target.blur(); });
+
+  window.addEventListener("keydown", (e) => {
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    switch (e.key) {
+      case " ": e.preventDefault(); if (audio.paused) togglePlay(); else tap(); break;
+      case "Enter": e.preventDefault(); togglePlay(); break;
+      case "Backspace": e.preventDefault(); undo(); break;
+      case "ArrowLeft": e.preventDefault(); seek(-3); break;
+      case "ArrowRight": e.preventDefault(); seek(3); break;
+      case "ArrowUp": e.preventDefault(); sel = Math.max(0, sel - 1); renderSheet(); scrollSel(); draw(); break;
+      case "ArrowDown": e.preventDefault(); sel = Math.min(rows.length - 1, sel + 1); renderSheet(); scrollSel(); draw(); break;
+      case ",": case "<": e.preventDefault(); nudge(e.shiftKey ? -0.5 : -0.1); break;
+      case ".": case ">": e.preventDefault(); nudge(e.shiftKey ? 0.5 : 0.1); break;
+    }
+  });
+
+  // ---------- audio ----------
+  $("file").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    if (audio.src) URL.revokeObjectURL(audio.src);
+    audio.src = URL.createObjectURL(f);
+    audio.playbackRate = +$("rate").value;
+    $("fileName").textContent = `${f.name} · 파형을 읽는 중…`;
+    ["play", "back", "fwd", "tap"].forEach(id => $(id).disabled = false);
+    try {
+      const buf = await f.arrayBuffer();
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      const decoded = await ctx.decodeAudioData(buf);
+      duration = decoded.duration;
+      buildPeaks(decoded);
+      ctx.close && ctx.close();
+      $("fileName").textContent = `${f.name} · ${fmtShort(duration)}`;
+    } catch (err) {
+      $("fileName").textContent = `${f.name} · 파형은 이 브라우저에서 읽지 못했지만 재생과 탭은 됩니다`;
+    }
+    draw(); updateStage();
+  });
+  audio.addEventListener("loadedmetadata", () => { if (!duration) duration = audio.duration; draw(); });
+  audio.addEventListener("play", () => { $("play").textContent = "❚❚ 일시정지"; loop(); });
+  audio.addEventListener("pause", () => { $("play").textContent = "▶ 재생"; });
+  audio.addEventListener("seeked", () => { draw(); updateStage(); markPlaying(); });
+
+  function buildPeaks(buf) {
+    peakRate = 50;
+    const n = Math.ceil(buf.duration * peakRate);
+    peaks = new Float32Array(n);
+    const chans = [];
+    for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
+    const step = buf.sampleRate / peakRate;
+    for (let i = 0; i < n; i++) {
+      const a = Math.floor(i * step), b = Math.min(Math.floor((i + 1) * step), chans[0].length);
+      let m = 0;
+      for (const ch of chans) for (let k = a; k < b; k += 4) { const v = Math.abs(ch[k]); if (v > m) m = v; }
+      peaks[i] = m;
+    }
+    let max = 0; for (const v of peaks) if (v > max) max = v;
+    if (max > 0) for (let i = 0; i < n; i++) peaks[i] = Math.sqrt(peaks[i] / max);
+  }
+
+  function loop() {
+    updateClock(); updateStage(); markPlaying(); draw();
+    if (!audio.paused) requestAnimationFrame(loop);
+  }
+  function updateClock() {
+    $("clock").innerHTML = "";
+    $("clock").append(fmtShort(audio.currentTime) + " ");
+    const s = document.createElement("span"); s.textContent = "/ " + fmtShort(duration || 0); $("clock").append(s);
+  }
+  function updateStage() {
+    const t = audio.currentTime, idx = activeIndex(t);
+    const now = $("now");
+    const text = idx >= 0 ? rows[idx].text : "";
+    if (!audio.src) return;
+    if (text) { now.className = "lyric"; now.textContent = ""; text.split(" / ").forEach((p, k) => { if (k) now.append(document.createElement("br")); now.append(p); }); }
+    else { now.className = "lyric empty"; now.textContent = idx < 0 ? "전주" : "간주 · 가사 내림"; }
+    const nx = $("next"); nx.textContent = "";
+    if (sel < rows.length) { const b = document.createElement("b"); b.textContent = `다음 탭 ${sel + 1}번 `; nx.append(b, rows[sel].text ? rows[sel].text.replace(/ \/ /g, " ") : "가사 내림"); }
+  }
+
+  // ---------- waveform ----------
+  const ov = $("overview"), zm = $("zoom");
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  function fit(c) {
+    const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return dpr;
+  }
+  const ZOOM_HALF = 8;
+  function zoomRange() { const c = audio.currentTime; return [c - ZOOM_HALF, c + ZOOM_HALF]; }
+
+  function drawWave(c, t0, t1, dpr) {
+    const g = c.getContext("2d"), W = c.width, H = c.height;
+    g.fillStyle = css("--bg"); g.fillRect(0, 0, W, H);
+    if (peaks) {
+      g.fillStyle = css("--wave");
+      const mid = H / 2;
+      for (let x = 0; x < W; x++) {
+        const a = t0 + (x / W) * (t1 - t0), b = t0 + ((x + 1) / W) * (t1 - t0);
+        let m = 0;
+        for (let i = Math.max(0, Math.floor(a * peakRate)); i <= Math.min(peaks.length - 1, Math.floor(b * peakRate)); i++) if (peaks[i] > m) m = peaks[i];
+        const h = m * (H * 0.46);
+        g.fillRect(x, mid - h, 1, h * 2 || 1);
+      }
+    }
+    const gold = css("--gold"), muted = css("--muted"), danger = css("--danger");
+    rows.forEach((r, i) => {
+      if (r.t < t0 || r.t > t1) return;
+      const x = ((r.t - t0) / (t1 - t0)) * W;
+      const bad = i > 0 && r.t <= rows[i - 1].t;
+      g.strokeStyle = bad ? danger : (r.text ? gold : muted);
+      g.lineWidth = (i === sel ? 3 : 1.5) * dpr;
+      g.setLineDash(r.text ? [] : [4 * dpr, 4 * dpr]);
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+      if (c === zm) {
+        g.setLineDash([]);
+        g.fillStyle = r.text ? gold : muted;
+        g.font = `${11 * dpr}px ${css("--font-mono") || "monospace"}`;
+        g.fillText(String(i + 1), x + 3 * dpr, 12 * dpr);
+      }
+    });
+    g.setLineDash([]);
+    const p = audio.currentTime;
+    if (p >= t0 && p <= t1) {
+      const x = ((p - t0) / (t1 - t0)) * W;
+      g.strokeStyle = css("--ink"); g.lineWidth = 1.5 * dpr;
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+    }
+  }
+  function draw() {
+    const d1 = fit(ov), d2 = fit(zm);
+    const D = duration || (rows.length ? rows[rows.length - 1].t + 10 : 60);
+    drawWave(ov, 0, D, d1);
+    const [a, b] = zoomRange();
+    drawWave(zm, a, b, d2);
+  }
+  ov.addEventListener("pointerdown", (e) => {
+    if (!audio.src) return;
+    const r = ov.getBoundingClientRect();
+    const D = duration || audio.duration || 0;
+    audio.currentTime = Math.max(0, ((e.clientX - r.left) / r.width) * D);
+  });
+  function zoomTime(e) { const r = zm.getBoundingClientRect(); const [a, b] = zoomRange(); return a + ((e.clientX - r.left) / r.width) * (b - a); }
+  zm.addEventListener("pointerdown", (e) => {
+    const r = zm.getBoundingClientRect(); const [a, b] = zoomRange();
+    const px = (t) => ((t - a) / (b - a)) * r.width;
+    let best = -1, bestD = 9;
+    rows.forEach((row, i) => { const d = Math.abs(px(row.t) - (e.clientX - r.left)); if (d < bestD) { bestD = d; best = i; } });
+    if (best >= 0) {
+      pushUndo(); dragging = best; sel = best; zm.setPointerCapture(e.pointerId); renderSheet(); draw();
+    } else if (audio.src) {
+      audio.currentTime = Math.max(0, zoomTime(e));
+    }
+  });
+  zm.addEventListener("pointermove", (e) => {
+    if (dragging < 0) return;
+    rows[dragging].t = +Math.max(0, zoomTime(e)).toFixed(2);
+    draw();
+  });
+  const endDrag = () => { if (dragging >= 0) { dragging = -1; changed(); } };
+  zm.addEventListener("pointerup", endDrag);
+  zm.addEventListener("pointercancel", endDrag);
+  window.addEventListener("resize", draw);
+
+  // ---------- save ----------
+  function setStatus(msg, kind) { const s = $("status"); s.textContent = msg; s.className = "status grow " + (kind || ""); }
+  $("copy").addEventListener("click", async (e) => {
+    e.currentTarget.blur();
+    const text = toLrc();
+    try { await navigator.clipboard.writeText(text); setStatus("LRC를 복사했습니다.", "ok"); }
+    catch { const ta = $("lrc"); ta.focus(); ta.select(); setStatus("복사 권한이 없어 아래 글을 선택해 두었습니다. Ctrl+C로 복사하세요.", ""); }
+  });
+  $("saveClaude").addEventListener("click", async (e) => {
+    e.currentTarget.blur();
+    if (!db) { setStatus("이 화면에서는 Claude에게 저장할 수 없습니다. LRC 복사를 눌러 대화창에 붙여 주세요.", "err"); return; }
+    const bad = rows.findIndex((r, i) => i > 0 && r.t <= rows[i - 1].t);
+    if (bad > 0) { setStatus(`${bad + 1}번 줄 시각이 앞 줄보다 빠릅니다. 빨간 줄을 고친 뒤 저장해 주세요.`, "err"); sel = bad; renderSheet(); scrollSel(); return; }
+    setStatus("저장 중…", "");
+    try {
+      await db.doc("timings/" + SONG_ID).set({ song: "하느님은 나의 목자", lrc: toLrc(), rows, savedAt: new Date().toISOString() });
+      setStatus("저장했습니다. 대화창에 '저장했어'라고 알려 주세요.", "ok");
+    } catch (err) {
+      setStatus("저장하지 못했습니다" + (err && err.code ? ` (${err.code})` : "") + ". LRC 복사를 눌러 대화창에 붙여 주세요.", "err");
+    }
+  });
+  let downloads = null;
+  $("dl").addEventListener("click", async (e) => {
+    e.currentTarget.blur();
+    if (!downloads) return;
+    try { await downloads.save({ filename: "timing.lrc.txt", data: toLrc() }); setStatus("파일을 저장했습니다. 이름을 timing.lrc로 바꿔 곡 폴더에 넣으면 됩니다.", "ok"); }
+    catch (err) { if (err && err.code !== "declined") setStatus("파일로 받지 못했습니다. LRC 복사를 써 주세요.", "err"); }
+  });
+
+  (async () => {
+    if (!window.claude || !window.claude.use) return;
+    try { db = await window.claude.use("db"); } catch { db = null; }
+    if (!db) { $("saveClaude").disabled = true; $("saveClaude").title = "이 화면에서는 쓸 수 없습니다"; }
+    try { downloads = await window.claude.use("downloads"); } catch { downloads = null; }
+    $("dl").hidden = !downloads;
+  })();
+
+  renderSheet(); updateClock(); draw();
+})();
+</script>
