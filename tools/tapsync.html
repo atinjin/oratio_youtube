@@ -71,7 +71,7 @@ label.small { font-size: .82rem; color: var(--muted); display: inline-flex; alig
   background: var(--stage); color: var(--stage-ink); border-radius: 10px; min-height: 150px;
   display: grid; place-items: center; text-align: center; padding: 18px; position: relative; overflow: hidden;
 }
-.stage .lyric { font-family: var(--font-lyric); font-weight: 700; font-size: clamp(1.25rem, 3.6vw, 2.1rem); line-height: 1.45; text-wrap: balance; }
+.stage .lyric { font-family: var(--font-lyric); font-weight: 700; font-size: clamp(1.25rem, 3.6vw, 2.1rem); line-height: 1.45; white-space: nowrap; max-width: 100%; }
 .stage .lyric.empty { color: #f4f0e466; font-weight: 500; font-size: 1rem; font-family: var(--font-ui); }
 .stage .next { position: absolute; left: 14px; right: 14px; bottom: 10px; font-size: .82rem; color: #f4f0e499; }
 .stage .next b { color: var(--gold); font-weight: 600; }
@@ -198,8 +198,8 @@ h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: 
 <script>
 (() => {
   const SONG_ID = "hananim-nui-mokja";
-  const ORIGINAL = [{"t": 29.1, "text": "하느님은 나의 목자 / 내게 부족함 없네"}, {"t": 36.4, "text": ""}, {"t": 44.39, "text": "그가 나를 푸른 풀밭에 / 누이시도다"}, {"t": 56.44, "text": ""}, {"t": 64.75, "text": "하느님은 나의 목자 / 내게 부족함 없네"}, {"t": 72.15, "text": "그가 나를 쉴 만한 물가로 / 인도하시도다"}, {"t": 89.95, "text": "내 영혼 다시 살리시어"}, {"t": 100.25, "text": ""}, {"t": 105.15, "text": "바른 길로 인도하시는도다"}, {"t": 111.55, "text": ""}, {"t": 118.74, "text": "주 이름 위해 인도하시도다"}, {"t": 127.57, "text": "내가 사망의 어두운 길을 / 다닐지라도"}, {"t": 139.61, "text": "내가 해를 두려워하지 / 않을 것은"}, {"t": 146.75, "text": ""}, {"t": 153.85, "text": "주께서 나와 함께 하심이라"}, {"t": 162.68, "text": "나를 안위하시나이다"}, {"t": 169.91, "text": ""}, {"t": 192.55, "text": "하느님은 나의 목자 / 내게 부족함 없네"}, {"t": 201.9, "text": ""}, {"t": 211.25, "text": "그가 나를 푸른 풀밭에 / 누이시도다"}, {"t": 222.0, "text": ""}, {"t": 231.85, "text": "내 평생의 선하심과 / 주의 인자하심이"}, {"t": 242.05, "text": "정녕 나를 따르리니"}, {"t": 250.6, "text": "내가 여호와 집에 거하리로다"}, {"t": 260.8, "text": "여호와의 집에 / 영원히 거하리로다"}, {"t": 269.75, "text": ""}, {"t": 292.7, "text": "아멘"}, {"t": 295.85, "text": ""}];
-  const DRAFT_KEY = "tapsync-draft-" + SONG_ID;
+  const ORIGINAL = [{"t": 29.1, "text": "하느님은 나의 목자"}, {"t": 32.99, "text": "내게 부족함 없네"}, {"t": 36.4, "text": ""}, {"t": 44.39, "text": "그가 나를 푸른 풀밭에"}, {"t": 52.14, "text": "누이시도다"}, {"t": 56.44, "text": ""}, {"t": 64.75, "text": "하느님은 나의 목자"}, {"t": 68.7, "text": "내게 부족함 없네"}, {"t": 72.15, "text": "그가 나를 쉴 만한 물가로"}, {"t": 83.28, "text": "인도하시도다"}, {"t": 89.95, "text": "내 영혼 다시 살리시어"}, {"t": 100.25, "text": ""}, {"t": 105.15, "text": "바른 길로 인도하시는도다"}, {"t": 111.55, "text": ""}, {"t": 118.74, "text": "주 이름 위해 인도하시도다"}, {"t": 127.57, "text": "내가 사망의 어두운 길을"}, {"t": 135.6, "text": "다닐지라도"}, {"t": 139.61, "text": "내가 해를 두려워하지"}, {"t": 144.55, "text": "않을 것은"}, {"t": 146.75, "text": ""}, {"t": 153.85, "text": "주께서 나와 함께 하심이라"}, {"t": 162.68, "text": "나를 안위하시나이다"}, {"t": 169.91, "text": ""}, {"t": 192.55, "text": "하느님은 나의 목자"}, {"t": 197.54, "text": "내게 부족함 없네"}, {"t": 201.9, "text": ""}, {"t": 211.25, "text": "그가 나를 푸른 풀밭에"}, {"t": 218.16, "text": "누이시도다"}, {"t": 222.0, "text": ""}, {"t": 231.85, "text": "내 평생의 선하심과"}, {"t": 237.29, "text": "주의 인자하심이"}, {"t": 242.05, "text": "정녕 나를 따르리니"}, {"t": 250.6, "text": "내가 여호와 집에 거하리로다"}, {"t": 260.8, "text": "여호와의 집에"}, {"t": 264.64, "text": "영원히 거하리로다"}, {"t": 269.75, "text": ""}, {"t": 292.7, "text": "아멘"}, {"t": 295.85, "text": ""}];
+  const DRAFT_KEY = "tapsync-draft-v2-" + SONG_ID;  // v2: 한 줄씩 나눈 가사
 
   const $ = (id) => document.getElementById(id);
   const audio = new Audio();
@@ -220,7 +220,7 @@ h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: 
       const raw = localStorage.getItem(DRAFT_KEY);
       if (!raw) return null;
       const d = JSON.parse(raw);
-      return Array.isArray(d) && d.length ? d : null;
+      return Array.isArray(d) && d.length && !d.some(r => /\//.test(r.text || "")) ? d : null;
     } catch { return null; }
   }
   function saveDraft() {
@@ -259,7 +259,7 @@ h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: 
       const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
       const t = document.createElement("span"); t.className = "t"; t.textContent = fmt(r.t);
       const tx = document.createElement("span"); tx.className = "tx" + (r.text ? "" : " clear");
-      tx.textContent = r.text ? r.text.replace(/ \/ /g, " ⏎ ") : "가사 내림 (간주)";
+      tx.textContent = r.text ? r.text : "가사 내림 (간주)";
       const acts = document.createElement("span"); acts.className = "acts";
       const add = document.createElement("button"); add.textContent = "+내림"; add.title = "이 줄 뒤에 가사 내림 지점 추가"; add.dataset.act = "add";
       acts.append(add);
@@ -272,7 +272,7 @@ h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: 
     $("lrc").value = toLrc();
     $("undo").disabled = undoStack.length === 0;
     $("tapInfo").textContent = sel < rows.length
-      ? `다음: ${sel + 1}번 ${rows[sel].text ? rows[sel].text.replace(/ \/ /g, " ") : "가사 내림"}`
+      ? `다음: ${sel + 1}번 ${rows[sel].text ? rows[sel].text : "가사 내림"}`
       : "마지막 줄까지 찍었습니다";
   }
   let lastPlaying = -2;
@@ -429,15 +429,22 @@ h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: 
     $("clock").append(fmtShort(audio.currentTime) + " ");
     const s = document.createElement("span"); s.textContent = "/ " + fmtShort(duration || 0); $("clock").append(s);
   }
+  // 가사가 두 줄로 넘어가지 않도록, 넘치면 글자 크기를 줄인다
+  function fitLine(el) {
+    el.style.fontSize = "";
+    const box = el.parentElement.clientWidth - 36;
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > box && size > 12) { size -= 1; el.style.fontSize = size + "px"; }
+  }
   function updateStage() {
     const t = audio.currentTime, idx = activeIndex(t);
     const now = $("now");
     const text = idx >= 0 ? rows[idx].text : "";
     if (!audio.src) return;
-    if (text) { now.className = "lyric"; now.textContent = ""; text.split(" / ").forEach((p, k) => { if (k) now.append(document.createElement("br")); now.append(p); }); }
+    if (text) { now.className = "lyric"; now.textContent = text; fitLine(now); }
     else { now.className = "lyric empty"; now.textContent = idx < 0 ? "전주" : "간주 · 가사 내림"; }
     const nx = $("next"); nx.textContent = "";
-    if (sel < rows.length) { const b = document.createElement("b"); b.textContent = `다음 탭 ${sel + 1}번 `; nx.append(b, rows[sel].text ? rows[sel].text.replace(/ \/ /g, " ") : "가사 내림"); }
+    if (sel < rows.length) { const b = document.createElement("b"); b.textContent = `다음 탭 ${sel + 1}번 `; nx.append(b, rows[sel].text ? rows[sel].text : "가사 내림"); }
   }
 
   // ---------- waveform ----------
