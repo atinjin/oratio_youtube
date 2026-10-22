@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+# 곡 폴더 안의 음원·영상 결과물은 저장소에 올리지 않습니다.
+songs/*/build/
+songs/*/*.mp4
+songs/*/*.mp3
+songs/*/*.wav
+songs/*/*.m4a
+songs/*/thumbnail.jpg
+songs/*/description.txt
+songs/*/timing.lrc
+fonts/*.ttf
+fonts/*.otf

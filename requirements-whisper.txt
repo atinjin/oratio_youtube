@@ -1,0 +1,5 @@
+# 가사 자동 정렬(선택). GPU 가 없으면 느리지만 CPU 로도 동작합니다.
+-r requirements.txt
+stable-ts>=2.17
+# 반주 분리(--vocals)를 쓰려면 아래 줄의 # 을 지우세요.
+# demucs>=4.0
