@@ -13,3 +13,4 @@ songs/*/timing.lrc
 fonts/*.ttf
 fonts/*.otf
 songs/*/*.m4a
+models/

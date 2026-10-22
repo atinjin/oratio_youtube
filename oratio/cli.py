@@ -134,8 +134,9 @@ def main(argv: list[str] | None = None) -> None:
 
     p = sub.add_parser("render", help="영상 만들기")
     p.add_argument("folder", help="곡 폴더 (audio.mp3, lyrics.txt, meta.yaml)")
-    p.add_argument("--align", choices=["auto", "whisper", "even"], default="auto",
-                   help="가사 타이밍 방법. auto = Whisper 가 설치되어 있으면 사용, 아니면 균등 분배")
+    p.add_argument("--align", choices=["auto", "vocals", "whisper", "even"], default="auto",
+                   help="가사 타이밍 방법. vocals = 목소리 트랙의 노래 구간에 맞춤(합창 추천), "
+                        "whisper = 음성 인식 정렬, even = 균등 분배")
     p.add_argument("--model", default="medium",
                    help="Whisper 모델 (tiny/base/small/medium/large-v3). 클수록 정확하지만 느림")
     p.add_argument("--vocals", action="store_true",

@@ -152,6 +152,25 @@ def smooth(cues: list[Cue]) -> list[Cue]:
     return cues
 
 
+def _installed(module: str) -> bool:
+    import importlib.util
+    return importlib.util.find_spec(module) is not None
+
+
+def _auto_mode(song: Song) -> str:
+    """목소리 트랙이 있으면 그걸로, 아니면 설치된 도구에 따라 고른다."""
+    from .vocals import find_vocals
+
+    if find_vocals(song):
+        return "vocals"
+    if _installed("stable_whisper"):
+        return "whisper"
+    if _installed("sherpa_onnx") and _installed("soundfile"):
+        return "vocals"
+    print("[정렬] Whisper / 목소리 분리 도구가 없어 균등 분배로 타이밍을 만듭니다.")
+    return "even"
+
+
 def get_cues(song: Song, mode: str, model_name: str, separate_vocals: bool, retime: bool) -> list[Cue]:
     total = audio_duration(song.audio)
 
@@ -160,14 +179,15 @@ def get_cues(song: Song, mode: str, model_name: str, separate_vocals: bool, reti
         return read_lrc(song.timing_file, total)
 
     if mode == "auto":
-        try:
-            import stable_whisper  # type: ignore  # noqa: F401
-            mode = "whisper"
-        except ImportError:
-            print("[정렬] Whisper 가 설치되어 있지 않아 균등 분배로 타이밍을 만듭니다.")
-            mode = "even"
+        mode = _auto_mode(song)
 
-    cues = whisper_timing(song, model_name, separate_vocals) if mode == "whisper" else even_timing(song, total)
+    if mode == "whisper":
+        cues = whisper_timing(song, model_name, separate_vocals)
+    elif mode == "vocals":
+        from .vocals import vocals_timing
+        cues = vocals_timing(song)
+    else:
+        cues = even_timing(song, total)
     cues = smooth(cues)
     write_lrc(song.timing_file, cues)
     print(f"[정렬] 타이밍을 저장했습니다: {song.timing_file}  (틀린 곳은 이 파일을 고친 뒤 다시 render)")

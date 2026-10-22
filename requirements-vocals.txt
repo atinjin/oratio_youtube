@@ -1,0 +1,5 @@
+# 반주를 걷어내고 목소리만 분리 (--align vocals). PyTorch 없이 CPU 로 동작합니다.
+# 분리 모델(약 65MB)은 처음 실행할 때 GitHub 에서 models/ 폴더로 자동으로 받습니다.
+-r requirements.txt
+sherpa-onnx>=1.12
+soundfile>=0.12

@@ -70,12 +70,31 @@ python -m oratio render songs/2026-10-25_주님의은혜
 - `[분:초]` 를 고치고 다시 render 하면 반영됩니다.
 - 가사를 많이 바꿨거나 처음부터 다시 맞추고 싶으면 `--retime` 을 붙입니다.
 
-## 3. 가사 자동 맞추기 (Whisper, 선택)
+## 3. 가사 자동 맞추기 (선택)
 
 기본 상태에서는 가사를 글자 수에 비례해 **균등하게** 나눕니다. 실제 노래와는 어긋나기 쉬워서
-`timing.lrc` 를 손봐야 합니다.
+`timing.lrc` 를 손봐야 합니다. 아래 두 방법 중 하나를 설치하면 훨씬 덜 어긋납니다.
+
+### 방법 A. 목소리 구간 맞춤 — 합창에 추천
+
+반주를 걷어내고 목소리만 남긴 뒤, **노래하는 구간에만** 가사를 나눠 놓습니다.
+간주 동안에는 가사를 내리고, 줄의 시작을 노래가 새로 시작하는 지점에 맞춥니다.
+합창은 음성 인식이 가사를 잘 알아듣지 못해서 이 방법이 더 안정적입니다.
+
+```bash
+pip install -r requirements-vocals.txt      # PyTorch 없이 CPU 로 동작
+python -m oratio render songs/곡폴더 --align vocals --retime --timing-only
+```
+
+- 처음 실행할 때 분리 모델(약 65MB)을 `models/` 폴더에 받습니다. 5분 곡 기준으로 분리에 3~5분 걸립니다.
+- 분리한 목소리는 `build/vocals.wav` 에 저장되어, 다음부터는 바로 씁니다.
+- 다른 프로그램(UVR 등)으로 분리한 목소리 파일이 있으면 곡 폴더에 `vocals.wav` 로 넣어도 됩니다.
+- 가사 줄 단위로 "어느 구간쯤"을 잡아 주는 방식이라 1~2초 어긋날 수 있습니다. 미리보기로 확인하고 `timing.lrc` 를 조금 고쳐 주세요.
+
+### 방법 B. Whisper 정렬
 
 **Whisper**(음성 인식 AI)를 설치하면, 이미 있는 가사를 음원에 맞춰 **자동으로 정렬**합니다.
+독창이나 가사가 또렷한 녹음에 잘 맞습니다.
 
 ```bash
 pip install -r requirements-whisper.txt
@@ -95,7 +114,7 @@ python -m oratio render songs/곡폴더 --retime --timing-only    # 타이밍만
 ```bash
 python -m oratio render songs/곡폴더 --vertical                  # 세로 영상 (유튜브 쇼츠용)
 python -m oratio render songs/곡폴더 --preview 20 --start 60     # 1분 지점부터 20초 미리보기
-python -m oratio render songs/곡폴더 --align even --retime        # Whisper 없이 균등 분배로 다시
+python -m oratio render songs/곡폴더 --align even --retime        # 균등 분배로 다시
 ```
 
 ### 화면 스타일 바꾸기 (`style.yaml`, 선택)
