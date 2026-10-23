@@ -213,9 +213,10 @@ details summary { cursor: pointer; font-size: .82rem; color: var(--muted); margi
         <div><kbd>←</kbd> <kbd>→</kbd> 3초 뒤로 / 앞으로</div>
         <div><kbd>↑</kbd> <kbd>↓</kbd> 줄 선택</div>
         <div><kbd>,</kbd> <kbd>.</kbd> 선택한 줄 0.1초 앞/뒤 (<kbd>Shift</kbd> 0.5초)</div>
-        <div>시각 누르기: 그 줄 2초 전부터 재생해서 다시 찍기</div>
+        <div><kbd>P</kbd> 또는 줄 옆 <b>▶</b>: 그 줄 시작부터 재생해서 확인 (다음 탭은 그다음 줄)</div>
+        <div>시각 누르기: 그 줄 2초 전으로 이동해서 그 줄을 다시 찍기</div>
         <div>가사 글자 누르기: 바로 고치기. 고치는 중 <kbd>Enter</kbd> = 커서 위치에서 줄 나누기, <kbd>Esc</kbd> = 취소</div>
-        <div>줄 옆 <b>＋</b> 아래에 줄 추가 · <b>⤓</b> 다음 줄과 합치기 · <b>✕</b> 삭제</div>
+        <div>줄 옆 <b>▶</b> 이 줄부터 재생 · <b>＋</b> 아래에 줄 추가 · <b>⤓</b> 다음 줄과 합치기 · <b>✕</b> 삭제</div>
         <div>간주 때 가사를 내리는 건 영상을 만들 때 자동으로 처리됩니다</div>
       </div>
     </section>
@@ -227,6 +228,7 @@ details summary { cursor: pointer; font-size: .82rem; color: var(--muted); margi
         <div class="row" style="justify-content:space-between">
           <h2>가사 타이밍 · <span id="count"></span></h2>
           <div class="row">
+            <button id="playSel" title="선택한 줄의 시작 시각부터 재생 (P)">▶ 선택한 줄부터</button>
             <button id="undo" disabled>되돌리기</button>
             <button id="reset">처음으로</button>
           </div>
@@ -306,7 +308,7 @@ details summary { cursor: pointer; font-size: .82rem; color: var(--muted); margi
       const tx = document.createElement("input"); tx.className = "tx"; tx.type = "text"; tx.value = r.text;
       tx.id = "tx-" + i; tx.setAttribute("aria-label", `${i + 1}번 가사`); tx.placeholder = "가사를 입력하세요";
       const acts = document.createElement("span"); acts.className = "acts";
-      for (const [act, label, title] of [["ins", "＋", "아래에 줄 추가"], ["merge", "⤓", "다음 줄과 합치기"], ["del", "✕", "이 줄 삭제"]]) {
+      for (const [act, label, title] of [["play", "▶", "이 줄부터 재생"], ["ins", "＋", "아래에 줄 추가"], ["merge", "⤓", "다음 줄과 합치기"], ["del", "✕", "이 줄 삭제"]]) {
         const b = document.createElement("button"); b.dataset.act = act; b.textContent = label; b.title = title; b.setAttribute("aria-label", title);
         if (act === "merge" && i === rows.length - 1) b.disabled = true;
         acts.append(b);
@@ -393,12 +395,22 @@ details summary { cursor: pointer; font-size: .82rem; color: var(--muted); margi
     if (act === "ins") return insertAfter(i);
     if (act === "del") return removeRow(i);
     if (act === "merge") return mergeNext(i);
+    if (act === "play") return playFrom(i);
     if (act === "seek") {
       sel = i;
       if (audio.src) audio.currentTime = Math.max(0, rows[i].t - 2);
       refreshMarks(); draw(); updateStage();
     }
   });
+  // 선택한 줄의 시작 시각부터 재생. 다음 탭은 그다음 줄을 찍는다.
+  function playFrom(i) {
+    if (!audio.src) { setStatus("먼저 음원을 불러와 주세요.", "err"); return; }
+    if (i < 0 || i >= rows.length) return;
+    audio.currentTime = rows[i].t;
+    sel = Math.min(i + 1, rows.length);
+    refreshMarks(); draw(); updateStage(); scrollSel();
+    if (audio.paused) togglePlay();
+  }
   // text editing
   let editBefore = null;
   sheet.addEventListener("focusin", (e) => {
@@ -436,6 +448,7 @@ details summary { cursor: pointer; font-size: .82rem; color: var(--muted); margi
     }
   });
 
+  $("playSel").addEventListener("click", (e) => { e.currentTarget.blur(); playFrom(Math.min(sel, rows.length - 1)); });
   $("addEnd").addEventListener("click", (e) => { e.currentTarget.blur(); insertAfter(rows.length - 1); });
 
   // ---------- tapping ----------
@@ -480,6 +493,7 @@ details summary { cursor: pointer; font-size: .82rem; color: var(--muted); margi
     switch (e.key) {
       case " ": e.preventDefault(); if (audio.paused) togglePlay(); else tap(); break;
       case "Enter": e.preventDefault(); togglePlay(); break;
+      case "p": case "P": case "ㅔ": e.preventDefault(); playFrom(Math.min(sel, rows.length - 1)); break;
       case "Backspace": e.preventDefault(); undo(); break;
       case "ArrowLeft": e.preventDefault(); seek(-3); break;
       case "ArrowRight": e.preventDefault(); seek(3); break;
